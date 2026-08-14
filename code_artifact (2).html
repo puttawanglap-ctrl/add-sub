@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>เกมคณิตศาสตร์สุดน่ารัก - ขั้นตอนการคำนวณ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Mali', cursive;
+            background-color: #5bb3a2;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .game-board {
+            background-color: #fff8e8;
+            border-radius: 36px;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+            position: relative;
+            border: 4px solid #f3e5c8;
+        }
+
+        /* Number button styling */
+        .num-btn {
+            background: linear-gradient(135deg, #ffa8a8 0%, #ffe3e3 100%);
+            border: 2px solid #ff6b6b;
+            color: #c92a2a;
+            box-shadow: 0 4px 0 #ff6b6b;
+            transition: all 0.1s ease;
+        }
+        
+        .num-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 #ff6b6b;
+        }
+        
+        .num-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #ff6b6b;
+        }
+
+        /* Input field styling */
+        .digit-input {
+            width: 42px;
+            height: 52px;
+            text-align: center;
+            font-size: 1.6rem;
+            font-weight: 700;
+            border: 2px solid #b1b1b1;
+            border-radius: 10px;
+            background-color: #ffffff;
+            outline: none;
+            transition: all 0.2s ease;
+            -moz-appearance: textfield;
+        }
+        .digit-input::-webkit-outer-spin-button,
+        .digit-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .digit-input:focus {
+            border-color: #2b8a3e;
+            background-color: #f4fce3;
+            box-shadow: 0 0 0 3px rgba(43, 138, 62, 0.25);
+        }
+
+        .digit-input.correct {
+            border-color: #2b8a3e;
+            color: #2b8a3e;
+            background-color: #ebfbee;
+            pointer-events: none;
+        }
+
+        .digit-input.incorrect {
+            border-color: #e03131;
+            color: #e03131;
+            background-color: #fff5f5;
+            animation: shake 0.4s ease-in-out;
+        }
+
+        .strikethrough {
+            position: relative;
+        }
+        .strikethrough::after {
+            content: '';
+            position: absolute;
+            top: 45%;
+            left: -10%;
+            width: 120%;
+            height: 3px;
+            background-color: #e03131;
+            transform: rotate(-25deg);
+            border-radius: 2px;
+        }
+
+        /* Animations */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+
+        .animate-pop {
+            animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .math-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .math-cell {
+            width: 42px;
+            text-align: center;
+            font-size: 1.75rem;
+            font-weight: 700;
+            position: relative;
+        }
+
+        .question-tab {
+            transition: all 0.2s ease;
+        }
+        .question-tab.active {
+            background-color: #fcc419;
+            color: #212529;
+            box-shadow: 0 4px 10px rgba(252, 196, 25, 0.4);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-3 md:p-6">
+
+    <!-- Top Navigation Tabs -->
+    <div class="flex gap-3 mb-4 z-10">
+        <button id="tab-q1" onclick="switchQuestion(1)" class="question-tab active px-6 py-2.5 rounded-full font-bold text-lg border-2 border-amber-500 bg-white text-gray-700 shadow-sm hover:bg-amber-50">
+            📌 ข้อ 1
+        </button>
+        <button id="tab-q2" onclick="switchQuestion(2)" class="question-tab px-6 py-2.5 rounded-full font-bold text-lg border-2 border-amber-500 bg-white text-gray-700 shadow-sm hover:bg-amber-50">
+            📌 ข้อ 2
+        </button>
+    </div>
+
+    <div class="game-board w-full max-w-3xl p-5 md:p-8 flex flex-col relative min-h-[580px]">
+        
+        <!-- Top Decor -->
+        <div class="absolute top-4 right-5 text-3xl opacity-80 pointer-events-none">📚</div>
+
+        <!-- Question Header & Main Equation -->
+        <div class="flex items-center gap-3 mb-6">
+            <div id="q-badge" class="w-11 h-11 rounded-full bg-amber-400 text-gray-900 flex items-center justify-center text-xl font-bold shadow-md flex-shrink-0">
+                1)
+            </div>
+            <div id="q-equation" class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 flex items-center flex-wrap gap-2">
+                <!-- Dynamic Equation Rendered Here -->
+            </div>
+        </div>
+
+        <!-- Working Area Container -->
+        <div id="working-area" class="flex-1 flex flex-col items-center justify-center my-2 relative w-full">
+            <!-- Dynamic Working Steps Rendered Here -->
+        </div>
+
+        <!-- Footer Answer -->
+        <div class="mt-4 flex items-center gap-4 opacity-0 transition-opacity duration-700" id="final-answer-section">
+            <h3 class="text-2xl font-bold text-gray-800 border-b-4 border-red-500 px-2">ตอบ</h3>
+            <span class="text-3xl font-bold text-green-700 tracking-widest" id="thai-numeral-answer">๑,๐๓๐</span>
+        </div>
+
+        <!-- Bottom Decor -->
+        <div class="flex justify-end gap-2 mt-2 opacity-70">
+            <span>📏</span><span>📏</span><span>📏</span>
+        </div>
+
+        <!-- Virtual Keypad -->
+        <div id="virtual-keypad" class="grid grid-cols-5 gap-2 max-w-md mx-auto w-full mt-4 pt-3 border-t-2 border-amber-200">
+            <button class="num-btn text-xl font-bold py-2.5 rounded-xl" onclick="pressKey('1')">1</button>
+            <button class="num-btn text-xl font-bold py-2.5 rounded-xl" onclick="pressKey('2')">2</button>
+            <button class="num-btn text-xl font-bold py-2.5 rounded-xl" onclick="pressKey('3')">3</button>
+            <button class="num-btn text-xl font-bold py-2.5 rounded-xl" onclick="pressKey('4')">4</button>
+            <button class="num-btn text-xl font-bold py-2.5 rounded-xl" onclick="pressKey('5')">5</button>
+            <button class="num-btn text-xl font-bold py-2.5 rounded-xl" onclick="pressKey('6')">6</button>
+            <button class="num-btn text-xl font-bold py-2.5 rounded-xl" onclick="pressKey('7')">7</button>
+            <button class="num-btn text-xl font-bold py-2.5 rounded-xl" onclick="pressKey('8')">8</button>
+            <button class="num-btn text-xl font-bold py-2.5 rounded-xl" onclick="pressKey('9')">9</button>
+            <button class="num-btn text-xl font-bold py-2.5 rounded-xl" onclick="pressKey('0')">0</button>
+        </div>
+
+        <!-- Feedback Overlay -->
+        <div id="feedback-msg" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border-4 border-amber-400 px-8 py-4 rounded-3xl shadow-2xl text-2xl font-bold text-center hidden z-50 text-gray-800">
+            เก่งมาก! 🎉
+        </div>
+    </div>
+
+    <script>
+        // Web Audio Synthesizer for cute sound effects
+        const AudioFX = {
+            ctx: null,
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            },
+            playPop() {
+                this.init();
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            },
+            playError() {
+                this.init();
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            },
+            playFanfare() {
+                this.init();
+                if (!this.ctx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime + idx * 0.12);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.12 + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.12);
+                    osc.stop(this.ctx.currentTime + idx * 0.12 + 0.3);
+                });
+            }
+        };
+
+        // Game State Data
+        const questionsData = {
+            1: {
+                badge: "1)",
+                type: "vertical", // Stacked operations like Image 1
+                equationHtml: `
+                    <div class="relative inline-flex flex-col items-center">
+                        <span id="bracket-note" class="text-blue-600 font-bold text-xl md:text-2xl transition-all duration-500 opacity-0 transform -translate-y-2">804</span>
+                        <div class="flex items-center">
+                            <span class="text-blue-600 font-bold border-b-2 border-blue-500 px-1">(1,254 - 450)</span>
+                            <span>&nbsp;+ 226 =</span>
+                            <div id="final-box" class="w-12 h-12 border-4 border-black ml-2 inline-flex items-center justify-center font-bold text-2xl bg-white rounded-lg"></div>
+                        </div>
+                    </div>
+                `,
+                thaiAnswer: "๑,๐๓๐",
+                finalVal: "1030",
+                step1: {
+                    title: "ขั้นที่ 1: ลบในวงเล็บ (1,254 - 450)",
+                    op: "-",
+                    topDigits: ["1,", "2", "5", "4"],
+                    botDigits: ["", "4", "5", "0"],
+                    inputs: [
+                        { id: "s1-100s", ans: "8", col: 1 },
+                        { id: "s1-10s",  ans: "0", col: 2 },
+                        { id: "s1-1s",   ans: "4", col: 3 }
+                    ],
+                    borrowNotes: [
+                        { id: "b-1000", val: "0", col: 0 },
+                        { id: "b-100",  val: "12", col: 1 }
+                    ],
+                    strikethroughs: ["d-1000", "d-100"]
+                },
+                step2: {
+                    title: "ขั้นที่ 2: บวกต่อด้วย 226 (804 + 226)",
+                    op: "+",
+                    topDigits: ["", "8", "0", "4"],
+                    botDigits: ["", "2", "2", "6"],
+                    inputs: [
+                        { id: "s2-1000s", ans: "1", col: 0 },
+                        { id: "s2-100s",  ans: "0", col: 1 },
+                        { id: "s2-10s",   ans: "3", col: 2 },
+                        { id: "s2-1s",    ans: "0", col: 3 }
+                    ],
+                    carryNotes: [
+                        { id: "c-10", val: "1", col: 2 }
+                    ]
+                }
+            },
+            2: {
+                badge: "2)",
+                type: "horizontal", // Side-by-side operations like Image 2
+                equationHtml: `
+                    <div class="relative inline-flex flex-col items-center">
+                        <span id="bracket-note" class="text-blue-600 font-bold text-xl md:text-2xl transition-all duration-500 opacity-0 transform -translate-y-2">676</span>
+                        <div class="flex items-center">
+                            <span>1,254 -&nbsp;</span>
+                            <span class="text-blue-600 font-bold border-b-2 border-blue-500 px-1">(450 + 226)</span>
+                            <span>&nbsp;=</span>
+                            <div id="final-box" class="w-12 h-12 border-4 border-black ml-2 inline-flex items-center justify-center font-bold text-2xl bg-white rounded-lg"></div>
+                        </div>
+                    </div>
+                `,
+                thaiAnswer: "๕๗๘",
+                finalVal: "578",
+                step1: {
+                    title: "บวกในวงเล็บ",
+                    op: "+",
+                    topDigits: ["4", "5", "0"],
+                    botDigits: ["2", "2", "6"],
+                    inputs: [
+                        { id: "s1-100s", ans: "6", col: 0 },
+                        { id: "s1-10s",  ans: "7", col: 1 },
+                        { id: "s1-1s",   ans: "6", col: 2 }
+                    ]
+                },
+                step2: {
+                    title: "นำไปลบ",
+                    op: "-",
+                    topDigits: ["1,", "2", "5", "4"],
+                    botDigits: ["", "?", "?", "?"], // Dynamic from step 1
+                    inputs: [
+                        { id: "s2-100s", ans: "5", col: 1 },
+                        { id: "s2-10s",  ans: "7", col: 2 },
+                        { id: "s2-1s",   ans: "8", col: 3 }
+                    ],
+                    borrowNotes: [
+                        { id: "b-1000", val: "0", col: 0 },
+                        { id: "b-100",  val: "11", col: 1 },
+                        { id: "b-10",   val: "14", col: 2 },
+                        { id: "b-1",    val: "14", col: 3 }
+                    ],
+                    strikethroughs: ["d-1000", "d-100", "d-10", "d-1"]
+                }
+            }
+        };
+
+        let currentQ = 1;
+        let currentStage = 1; // 1 = First calculation, 2 = Second calculation
+        let activeInput = null;
+        let activeInputsList = [];
+        let completedCount = 0;
+
+        function switchQuestion(qNum) {
+            currentQ = qNum;
+            currentStage = 1;
+            completedCount = 0;
+
+            // Update Tab UI
+            document.querySelectorAll('.question-tab').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-q${qNum}`).classList.add('active');
+
+            // Update Header
+            const qData = questionsData[qNum];
+            document.getElementById('q-badge').textContent = qData.badge;
+            document.getElementById('q-equation').innerHTML = qData.equationHtml;
+            document.getElementById('thai-numeral-answer').textContent = qData.thaiAnswer;
+            document.getElementById('final-answer-section').classList.add('opacity-0');
+
+            renderWorkingArea();
+        }
+
+        function renderWorkingArea() {
+            const area = document.getElementById('working-area');
+            const qData = questionsData[currentQ];
+
+            if (qData.type === 'vertical') {
+                // Layout like Image 1 (Stacked Vertically)
+                area.innerHTML = `
+                    <div class="flex flex-col items-center w-full max-w-sm">
+                        <div class="text-left w-full mb-2">
+                            <span class="text-xl font-bold text-gray-800 border-b-4 border-red-500 pb-0.5">วิธีทำ</span>
+                        </div>
+
+                        <!-- Step 1: Subtraction Stack -->
+                        <div id="step1-container" class="w-full flex flex-col items-end text-3xl font-mono tracking-widest text-gray-800 relative py-2">
+                            <!-- Borrow Notes -->
+                            <div class="math-row h-7 text-amber-600 text-lg font-bold w-full justify-end">
+                                <span id="b-1000" class="math-cell opacity-0">0</span>
+                                <span id="b-100" class="math-cell opacity-0">12</span>
+                                <span class="math-cell"></span>
+                                <span class="math-cell"></span>
+                            </div>
+                            <!-- Top Minuend -->
+                            <div class="math-row">
+                                <span id="d-1000" class="math-cell">1,</span>
+                                <span id="d-100" class="math-cell">2</span>
+                                <span id="d-10" class="math-cell">5</span>
+                                <span id="d-1" class="math-cell">4</span>
+                            </div>
+                            <!-- Subtrahend -->
+                            <div class="math-row relative w-full justify-end">
+                                <span class="absolute left-4 top-1 font-bold text-black">-</span>
+                                <span class="math-cell"></span>
+                                <span class="math-cell">4</span>
+                                <span class="math-cell">5</span>
+                                <span class="math-cell">0</span>
+                            </div>
+                            <div class="w-full border-b-2 border-black my-1"></div>
+                            <!-- Step 1 Inputs -->
+                            <div class="math-row" id="s1-inputs-row">
+                                <input type="text" inputmode="numeric" class="digit-input text-blue-600" id="s1-100s" data-ans="8" data-step="1">
+                                <input type="text" inputmode="numeric" class="digit-input text-blue-600" id="s1-10s" data-ans="0" data-step="1">
+                                <input type="text" inputmode="numeric" class="digit-input text-blue-600" id="s1-1s" data-ans="4" data-step="1">
+                            </div>
+                            <div class="w-full border-b-2 border-black my-1"></div>
+                        </div>
+
+                        <!-- Step 2: Addition Stack (Initially dimmed) -->
+                        <div id="step2-container" class="w-full flex flex-col items-end text-3xl font-mono tracking-widest text-gray-800 relative py-2 opacity-40 pointer-events-none transition-opacity duration-500">
+                            <!-- Carry Notes -->
+                            <div class="math-row h-7 text-amber-600 text-lg font-bold w-full justify-end">
+                                <span class="math-cell"></span>
+                                <span class="math-cell"></span>
+                                <span id="c-10" class="math-cell opacity-0">1</span>
+                                <span class="math-cell"></span>
+                            </div>
+                            <!-- Addend 2 -->
+                            <div class="math-row relative w-full justify-end">
+                                <span class="absolute left-4 top-1 font-bold text-black">+</span>
+                                <span class="math-cell"></span>
+                                <span class="math-cell">2</span>
+                                <span class="math-cell">2</span>
+                                <span class="math-cell">6</span>
+                            </div>
+                            <div class="w-full border-b-2 border-black my-1"></div>
+                            <!-- Step 2 Inputs -->
+                            <div class="math-row" id="s2-inputs-row">
+                                <input type="text" inputmode="numeric" class="digit-input text-green-700" id="s2-1000s" data-ans="1" data-step="2">
+                                <input type="text" inputmode="numeric" class="digit-input text-green-700" id="s2-100s" data-ans="0" data-step="2">
+                                <input type="text" inputmode="numeric" class="digit-input text-green-700" id="s2-10s" data-ans="3" data-step="2">
+                                <input type="text" inputmode="numeric" class="digit-input text-green-700" id="s2-1s" data-ans="0" data-step="2">
+                            </div>
+                            <div class="w-full border-b-4 border-double border-red-600 my-1"></div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Layout like Image 2 (Side by Side)
+                area.innerHTML = `
+                    <div class="flex flex-col md:flex-row justify-around items-start w-full my-auto">
+                        <!-- Left Side: Step 1 Addition -->
+                        <div class="flex flex-col items-center w-full md:w-5/12 mb-6 md:mb-0">
+                            <h3 class="text-xl font-bold text-gray-800 border-b-4 border-red-500 pb-0.5 mb-4 self-start">วิธีทำ</h3>
+                            <div class="flex flex-col items-end text-3xl font-mono tracking-widest text-gray-800">
+                                <div class="math-row">
+                                    <span class="math-cell">4</span>
+                                    <span class="math-cell">5</span>
+                                    <span class="math-cell">0</span>
+                                </div>
+                                <div class="math-row relative w-full justify-end">
+                                    <span class="absolute -left-6 top-1 font-bold text-blue-600">+</span>
+                                    <span class="math-cell">2</span>
+                                    <span class="math-cell">2</span>
+                                    <span class="math-cell">6</span>
+                                </div>
+                                <div class="w-full border-b-2 border-black my-1.5"></div>
+                                <div class="math-row">
+                                    <input type="text" inputmode="numeric" class="digit-input text-blue-600" id="s1-100s" data-ans="6" data-step="1">
+                                    <input type="text" inputmode="numeric" class="digit-input text-blue-600" id="s1-10s" data-ans="7" data-step="1">
+                                    <input type="text" inputmode="numeric" class="digit-input text-blue-600" id="s1-1s" data-ans="6" data-step="1">
+                                </div>
+                                <div class="w-full border-b-4 border-double border-red-600 mt-1.5"></div>
+                            </div>
+                        </div>
+
+                        <!-- Divider -->
+                        <div class="hidden md:block border-r-4 border-dashed border-red-400 h-64 self-center mx-2"></div>
+                        <div class="block md:hidden w-full border-t-4 border-dashed border-red-400 my-2"></div>
+
+                        <!-- Right Side: Step 2 Subtraction (Initially dimmed) -->
+                        <div id="step2-container" class="flex flex-col items-center w-full md:w-5/12 opacity-40 pointer-events-none transition-opacity duration-500">
+                            <div class="flex flex-col items-end text-3xl font-mono tracking-widest text-gray-800 relative pt-6">
+                                <!-- Borrow Notes -->
+                                <div class="math-row h-7 text-amber-600 text-lg font-bold w-full justify-end absolute top-0">
+                                    <span id="b-1000" class="math-cell opacity-0">0</span>
+                                    <span id="b-100" class="math-cell opacity-0">11</span>
+                                    <span id="b-10" class="math-cell opacity-0">14</span>
+                                    <span id="b-1" class="math-cell opacity-0">14</span>
+                                </div>
+                                <!-- Minuend -->
+                                <div class="math-row">
+                                    <span id="d-1000" class="math-cell">1,</span>
+                                    <span id="d-100" class="math-cell">2</span>
+                                    <span id="d-10" class="math-cell">5</span>
+                                    <span id="d-1" class="math-cell">4</span>
+                                </div>
+                                <!-- Subtrahend -->
+                                <div class="math-row relative w-full justify-end">
+                                    <span class="absolute -left-6 top-1 font-bold text-black">-</span>
+                                    <span class="math-cell"></span>
+                                    <span id="val-100" class="math-cell font-bold text-blue-600">?</span>
+                                    <span id="val-10" class="math-cell font-bold text-blue-600">?</span>
+                                    <span id="val-1" class="math-cell font-bold text-blue-600">?</span>
+                                </div>
+                                <div class="w-full border-b-2 border-black my-1.5"></div>
+                                <div class="math-row">
+                                    <input type="text" inputmode="numeric" class="digit-input text-green-700" id="s2-100s" data-ans="5" data-step="2">
+                                    <input type="text" inputmode="numeric" class="digit-input text-green-700" id="s2-10s" data-ans="7" data-step="2">
+                                    <input type="text" inputmode="numeric" class="digit-input text-green-700" id="s2-1s" data-ans="8" data-step="2">
+                                </div>
+                                <div class="w-full border-b-4 border-double border-red-600 mt-1.5"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            setupStepInputs();
+        }
+
+        function setupStepInputs() {
+            const stepPrefix = currentStage === 1 ? 's1' : 's2';
+            const inputs = Array.from(document.querySelectorAll(`input[data-step="${currentStage}"]`));
+            activeInputsList = inputs;
+
+            inputs.forEach((input, index) => {
+                input.disabled = (currentStage === 2 && document.getElementById('step2-container').classList.contains('pointer-events-none'));
+                
+                input.addEventListener('focus', () => {
+                    activeInput = input;
+                });
+
+                input.addEventListener('input', (e) => {
+                    let val = e.target.value.replace(/[^0-9]/g, '');
+                    if (val.length > 1) val = val.slice(-1);
+                    e.target.value = val;
+                    if (val !== '') {
+                        validateDigit(input, val);
+                    }
+                });
+            });
+
+            // Auto focus rightmost input (units column first)
+            if (inputs.length > 0) {
+                const startInput = inputs[inputs.length - 1];
+                activeInput = startInput;
+                if (!startInput.disabled) {
+                    setTimeout(() => startInput.focus(), 100);
+                }
+            }
+        }
+
+        function validateDigit(input, val) {
+            const expected = input.getAttribute('data-ans');
+
+            if (val === expected) {
+                // Correct Digit
+                AudioFX.playPop();
+                input.classList.remove('incorrect');
+                input.classList.add('correct', 'animate-pop');
+                input.disabled = true;
+                completedCount++;
+
+                // Visual helpers for borrowing / carrying
+                handleVisualStepHelpers(input.id);
+
+                // Check if step finished
+                if (completedCount === activeInputsList.length) {
+                    if (currentStage === 1) {
+                        finishStage1();
+                    } else {
+                        finishStage2();
+                    }
+                } else {
+                    // Move focus to next input to the left
+                    const idx = activeInputsList.indexOf(input);
+                    if (idx > 0) {
+                        activeInput = activeInputsList[idx - 1];
+                        activeInput.focus();
+                    }
+                }
+            } else {
+                // Incorrect Digit
+                AudioFX.playError();
+                input.classList.add('incorrect');
+                setTimeout(() => {
+                    input.classList.remove('incorrect');
+                    input.value = '';
+                }, 450);
+            }
+        }
+
+        function handleVisualStepHelpers(inputId) {
+            // Q1 Step 1 Borrowing
+            if (currentQ === 1 && currentStage === 1) {
+                if (inputId === 's1-100s') { // 12 - 4 = 8
+                    document.getElementById('b-1000').classList.remove('opacity-0');
+                    document.getElementById('d-1000').classList.add('strikethrough');
+                }
+                if (inputId === 's1-10s') { // Borrowed for 12
+                    document.getElementById('b-100').classList.remove('opacity-0');
+                    document.getElementById('d-10').classList.add('strikethrough');
+                }
+            }
+            // Q1 Step 2 Carrying
+            if (currentQ === 1 && currentStage === 2) {
+                if (inputId === 's1-1s') { // 4 + 6 = 10, carry 1
+                    document.getElementById('c-10').classList.remove('opacity-0');
+                }
+            }
+            // Q2 Step 2 Borrowing
+            if (currentQ === 2 && currentStage === 2) {
+                if (inputId === 's2-1s') {
+                    document.getElementById('b-1').classList.remove('opacity-0');
+                    document.getElementById('b-10').classList.remove('opacity-0');
+                    document.getElementById('d-1').classList.add('strikethrough');
+                    document.getElementById('d-10').classList.add('strikethrough');
+                }
+                if (inputId === 's2-10s') {
+                    document.getElementById('b-100').classList.remove('opacity-0');
+                    document.getElementById('d-100').classList.add('strikethrough');
+                }
+                if (inputId === 's2-100s') {
+                    document.getElementById('b-1000').classList.remove('opacity-0');
+                    document.getElementById('d-1000').classList.add('strikethrough');
+                }
+            }
+        }
+
+        function finishStage1() {
+            showToast("เก่งมาก! ไปทำขั้นตอนถัดไปกันต่อเลย ✨");
+            
+            // Show bracket answer note at header
+            const bracketNote = document.getElementById('bracket-note');
+            if (bracketNote) {
+                bracketNote.classList.remove('opacity-0', '-translate-y-2');
+            }
+
+            setTimeout(() => {
+                currentStage = 2;
+                completedCount = 0;
+
+                const step2Container = document.getElementById('step2-container');
+                step2Container.classList.remove('opacity-40', 'pointer-events-none');
+
+                // If Q2 side-by-side, transfer values
+                if (currentQ === 2) {
+                    document.getElementById('val-100').textContent = document.getElementById('s1-100s').value;
+                    document.getElementById('val-10').textContent = document.getElementById('s1-10s').value;
+                    document.getElementById('val-1').textContent = document.getElementById('s1-1s').value;
+                }
+
+                setupStepInputs();
+            }, 800);
+        }
+
+        function finishStage2() {
+            AudioFX.playFanfare();
+            showToast("ยอดเยี่ยมมาก! คำนวณถูกต้องทั้งหมด 🎉", 3000);
+
+            // Fill final box
+            const finalBox = document.getElementById('final-box');
+            if (finalBox) {
+                finalBox.textContent = questionsData[currentQ].finalVal;
+                finalBox.classList.add('text-green-600', 'bg-green-100', 'border-green-600', 'animate-pop');
+            }
+
+            // Show footer Thai numeral answer
+            document.getElementById('final-answer-section').classList.remove('opacity-0');
+
+            // Trigger Confetti
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+
+        function pressKey(num) {
+            if (activeInput && !activeInput.disabled) {
+                activeInput.value = num;
+                validateDigit(activeInput, num);
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= '0' && e.key <= '9') {
+                if (activeInput && !activeInput.disabled) {
+                    activeInput.value = e.key;
+                    validateDigit(activeInput, e.key);
+                }
+            }
+        });
+
+        function showToast(msg, duration = 1600) {
+            const toast = document.getElementById('feedback-msg');
+            toast.textContent = msg;
+            toast.classList.remove('hidden');
+            toast.classList.add('animate-pop');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+                toast.classList.remove('animate-pop');
+            }, duration);
+        }
+
+        // Initialize on Load
+        window.onload = () => {
+            switchQuestion(1);
+        };
+    </script>
+</body>
+</html>
